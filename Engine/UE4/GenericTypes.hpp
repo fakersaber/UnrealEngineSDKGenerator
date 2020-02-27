@@ -529,7 +529,7 @@ bool UEObject::IsA() const
 	{
 		return false;
 	}
-
+	//UStruct下放的Super直接转换为UClass
 	for (auto super = GetClass(); super.IsValid(); super = super.GetSuper().Cast<UEClass>())
 	{
 		if (super.object == cmp.object)

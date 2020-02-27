@@ -31,7 +31,7 @@ bool ComparePropertyLess(const UEProperty& lhs, const UEProperty& rhs)
 		return lhs.Cast<UEBoolProperty>() < rhs.Cast<UEBoolProperty>();
 	}
 	
-	return lhs.GetOffset() < rhs.GetOffset();
+	return lhs.GetOffset() < rhs.GetOffset(); 
 }
 
 Package::Package(const UEObject& _packageObj)
@@ -41,6 +41,7 @@ Package::Package(const UEObject& _packageObj)
 
 void Package::Process(std::unordered_map<UEObject, bool>& processedObjects)
 {
+	//在这里
 	for (auto obj : ObjectsStore())
 	{
 		const auto package = obj.GetPackageObject();
@@ -50,6 +51,7 @@ void Package::Process(std::unordered_map<UEObject, bool>& processedObjects)
 			{
 				GenerateEnum(obj.Cast<UEEnum>());
 			}
+			//UConst UE4不支持
 			else if (obj.IsA<UEConst>())
 			{
 				GenerateConst(obj.Cast<UEConst>());
@@ -105,6 +107,7 @@ bool Package::AddDependency(const UEObject& package) const
 
 void Package::GeneratePrerequisites(const UEObject& obj, std::unordered_map<UEObject, bool>& processedObjects)
 {
+	//处理所有Class类型为UClass与UScriptStruct的UObject
 	if (!obj.IsValid())
 	{
 		return;
@@ -133,6 +136,7 @@ void Package::GeneratePrerequisites(const UEObject& obj, std::unordered_map<UEOb
 		return;
 	}
 
+	//
 	if (AddDependency(classPackage))
 	{
 		return;
@@ -158,6 +162,7 @@ void Package::GeneratePrerequisites(const UEObject& obj, std::unordered_map<UEOb
 
 		GenerateMemberPrerequisites(structObj.GetChildren().Cast<UEProperty>(), processedObjects);
 
+		//上面都是收集数据
 		if (isClass)
 		{
 			GenerateClass(obj.Cast<UEClass>());
@@ -173,6 +178,7 @@ void Package::GenerateMemberPrerequisites(const UEProperty& first, std::unordere
 {
 	using namespace cpplinq;
 
+	//prop为UProperty类型
 	for (auto prop = first; prop.IsValid(); prop = prop.GetNext().Cast<UEProperty>())
 	{
 		const auto info = prop.GetInfo();
@@ -183,6 +189,7 @@ void Package::GenerateMemberPrerequisites(const UEProperty& first, std::unordere
 				auto byteProperty = prop.Cast<UEByteProperty>();
 				if (byteProperty.IsEnum())
 				{
+					//AddDependency是将当前的package添加到
 					AddDependency(byteProperty.GetEnum().GetPackageObject());
 				}
 			}
@@ -192,10 +199,14 @@ void Package::GenerateMemberPrerequisites(const UEProperty& first, std::unordere
 				AddDependency(enumProperty.GetEnum().GetPackageObject());
 			}
 		}
+
+		//对于非基本类型外的，需要再次解析
 		else if (info.Type == UEProperty::PropertyType::CustomStruct)
 		{
 			GeneratePrerequisites(prop.Cast<UEStructProperty>().GetStruct(), processedObjects);
 		}
+
+		//
 		else if (info.Type == UEProperty::PropertyType::Container)
 		{
 			std::vector<UEProperty> innerProperties;
@@ -368,10 +379,13 @@ void Package::GenerateClass(const UEClass& classObj)
 			p.Size = 0;
 			p.Name = prop.Name;
 			p.Type = "static " + prop.Type;
+
+			//push成员  staticMember?
 			c.Members.push_back(std::move(p));
 		}
 	}
 
+	//根据名字从全局容器中去找
 	std::vector<IGenerator::PredefinedMember> predefinedMembers;
 	if (generator->GetPredefinedClassMembers(c.FullName, predefinedMembers))
 	{
@@ -388,6 +402,7 @@ void Package::GenerateClass(const UEClass& classObj)
 	}
 	else
 	{
+		//遍历是通过field下的next指针
 		std::vector<UEProperty> properties;
 		for (auto prop = classObj.GetChildren().Cast<UEProperty>(); prop.IsValid(); prop = prop.GetNext().Cast<UEProperty>())
 		{
@@ -398,7 +413,7 @@ void Package::GenerateClass(const UEClass& classObj)
 				&& !prop.IsA<UEConst>()
 				&& (!super.IsValid()
 					|| (super != classObj
-						&& prop.GetOffset() >= super.GetPropertySize()
+						&& prop.GetOffset() >= super.GetPropertySize()   //子类偏移肯定大于父类总大小
 						)
 					)
 				)
@@ -408,60 +423,67 @@ void Package::GenerateClass(const UEClass& classObj)
 		}
 		std::sort(std::begin(properties), std::end(properties), ComparePropertyLess);
 
+		//这个offset是起始值，没有基类就是0，
 		GenerateMembers(classObj, offset, properties, c.Members);
 	}
 
-	generator->GetPredefinedClassMethods(c.FullName, c.PredefinedMethods);
-	
-	if (generator->ShouldUseStrings())
-	{
-		c.PredefinedMethods.push_back(IGenerator::PredefinedMethod::Inline(tfm::format(R"(	static UClass* StaticClass()
-	{
-		static auto ptr = UObject::FindClass(%s);
-		return ptr;
-	})", generator->ShouldXorStrings() ? tfm::format("_xor_(\"%s\")", c.FullName) : tfm::format("\"%s\"", c.FullName))));
-	}
-	else
-	{
-		c.PredefinedMethods.push_back(IGenerator::PredefinedMethod::Inline(tfm::format(R"(	static UClass* StaticClass()
-	{
-		static auto ptr = UObject::GetObjectCasted<UClass>(%d);
-		return ptr;
-	})", classObj.GetIndex())));
-	}
 
-	GenerateMethods(classObj, c.Methods);
+	//methond先无视
+	//{
+	//	generator->GetPredefinedClassMethods(c.FullName, c.PredefinedMethods);
+	//	
+	//	if (generator->ShouldUseStrings())
+	//	{
+	//		c.PredefinedMethods.push_back(IGenerator::PredefinedMethod::Inline(tfm::format(R"(	static UClass* StaticClass()
+	//	{
+	//		static auto ptr = UObject::FindClass(%s);
+	//		return ptr;
+	//	})", generator->ShouldXorStrings() ? tfm::format("_xor_(\"%s\")", c.FullName) : tfm::format("\"%s\"", c.FullName))));
+	//	}
+	//	else
+	//	{
+	//		c.PredefinedMethods.push_back(IGenerator::PredefinedMethod::Inline(tfm::format(R"(	static UClass* StaticClass()
+	//	{
+	//		static auto ptr = UObject::GetObjectCasted<UClass>(%d);
+	//		return ptr;
+	//	})", classObj.GetIndex())));
+	//	}
 
-	//search virtual functions
-	IGenerator::VirtualFunctionPatterns patterns;
-	if (generator->GetVirtualFunctionPatterns(c.FullName, patterns))
-	{
-		const auto vtable = *reinterpret_cast<uintptr_t**>(classObj.GetAddress());
+	//	GenerateMethods(classObj, c.Methods);
 
-		size_t methodCount = 0;
-		while (true)
-		{
-			MEMORY_BASIC_INFORMATION mbi;
-			auto res = VirtualQuery(reinterpret_cast<const void*>(vtable[methodCount]), &mbi, sizeof(mbi));
-			if (res == 0 || (mbi.Protect != PAGE_EXECUTE_READWRITE && mbi.Protect != PAGE_EXECUTE_READ))
-			{
-				break;
-			}
-			++methodCount;
-		}
+	//	//search virtual functions
+	//	IGenerator::VirtualFunctionPatterns patterns;
+	//	if (generator->GetVirtualFunctionPatterns(c.FullName, patterns))
+	//	{
+	//		const auto vtable = *reinterpret_cast<uintptr_t**>(classObj.GetAddress());
 
-		for (auto&& pattern : patterns)
-		{
-			for (auto i = 0u; i < methodCount; ++i)
-			{
-				if (vtable[i] != 0 && FindPattern(vtable[i], std::get<2>(pattern), reinterpret_cast<const unsigned char*>(std::get<0>(pattern)), std::get<1>(pattern)) != -1)
-				{
-					c.PredefinedMethods.push_back(IGenerator::PredefinedMethod::Inline(tfm::format(std::get<3>(pattern), i)));
-					break;
-				}
-			}
-		}
-	}
+	//		size_t methodCount = 0;
+	//		while (true)
+	//		{
+	//			MEMORY_BASIC_INFORMATION mbi;
+	//			auto res = VirtualQuery(reinterpret_cast<const void*>(vtable[methodCount]), &mbi, sizeof(mbi));
+	//			if (res == 0 || (mbi.Protect != PAGE_EXECUTE_READWRITE && mbi.Protect != PAGE_EXECUTE_READ))
+	//			{
+	//				break;
+	//			}
+	//			++methodCount;
+	//		}
+
+	//		for (auto&& pattern : patterns)
+	//		{
+	//			for (auto i = 0u; i < methodCount; ++i)
+	//			{
+	//				if (vtable[i] != 0 && FindPattern(vtable[i], std::get<2>(pattern), reinterpret_cast<const unsigned char*>(std::get<0>(pattern)), std::get<1>(pattern)) != -1)
+	//				{
+	//					c.PredefinedMethods.push_back(IGenerator::PredefinedMethod::Inline(tfm::format(std::get<3>(pattern), i)));
+	//					break;
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+
+
 
 	classes.emplace_back(std::move(c));
 }
@@ -497,6 +519,7 @@ void Package::GenerateMembers(const UEStruct& structObj, size_t offset, const st
 
 	for (auto&& prop : properties)
 	{
+		//这种情况下该变量到offset间的都是没有标记UPROPERTY的成员，无法知道信息
 		if (offset < prop.GetOffset())
 		{
 			previousBitfieldProperty = UEBoolProperty();
@@ -510,11 +533,13 @@ void Package::GenerateMembers(const UEStruct& structObj, size_t offset, const st
 		{
 			Member sp;
 			sp.Offset = prop.GetOffset();
+			//这个size也是elementSize
 			sp.Size = info.Size;
 
 			sp.Type = info.CppType;
+			//根据名字，在末尾会加上次数
 			sp.Name = MakeValidName(prop.GetName());
-
+			
 			const auto it = uniqueMemberNames.find(sp.Name);
 			if (it == std::end(uniqueMemberNames))
 			{
@@ -526,11 +551,13 @@ void Package::GenerateMembers(const UEStruct& structObj, size_t offset, const st
 				sp.Name += tfm::format("%02d", it->second);
 			}
 
+			//表示是个数组类型，加上数组长度
 			if (prop.GetArrayDim() > 1)
 			{
 				sp.Name += tfm::format("[0x%X]", prop.GetArrayDim());
 			}
 
+			//bit表示的bool类型
 			if (prop.IsA<UEBoolProperty>() && prop.Cast<UEBoolProperty>().IsBitfield())
 			{
 				auto boolProp = prop.Cast<UEBoolProperty>();
@@ -581,6 +608,8 @@ void Package::GenerateMembers(const UEStruct& structObj, size_t offset, const st
 		offset = prop.GetOffset() + prop.GetElementSize() * prop.GetArrayDim();
 	}
 
+
+	//末尾的padding
 	if (offset < structObj.GetPropertySize())
 	{
 		const auto size = structObj.GetPropertySize() - offset;

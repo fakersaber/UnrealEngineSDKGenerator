@@ -148,16 +148,22 @@ void ProcessPackages(const fs::path& path)
 
 	std::unordered_map<UEObject, bool> processedObjects;
 
+	//package就是最外层的UObject
 	auto packageObjects = from(ObjectsStore())
 		>> select([](auto&& o) { return o.GetPackageObject(); })
 		>> where([](auto&& o) { return o.IsValid(); })
 		>> distinct()
 		>> to_vector();
 
+
+
+
+
 	for (auto obj : packageObjects)
 	{
 		auto package = std::make_unique<Package>(obj);
 
+		//开始处理
 		package->Process(processedObjects);
 		if (package->Save(sdkPath))
 		{
@@ -225,6 +231,7 @@ DWORD WINAPI OnAttach(LPVOID lpParameter)
 	std::ofstream log(outputDirectory / "Generator.log");
 	Logger::SetStream(&log);
 
+	//只处理了全局的UObject与Name，但是每一个UObject中的成员并没有解析出来
 	if (generator->ShouldDumpArrays())
 	{
 		Dump(outputDirectory);

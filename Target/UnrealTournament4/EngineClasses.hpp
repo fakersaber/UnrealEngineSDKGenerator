@@ -179,18 +179,31 @@ struct FScriptMulticastDelegate
 	unsigned char UnknownData[16];
 };
 
+//定义在下面，这里前置声明一下
 class UClass;
 
 class UObject
 {
 public:
+	/**虚表地址**/
 	FPointer VTableObject;
+
 	int32_t ObjectFlags;
+
+	/** Index into GObjectArray...very private. */
 	int32_t InternalIndex;
+
+	/** Class the object belongs to. */
 	UClass* Class;
+
+	/** Name of this object */
 	FName Name;
+
+	/** Object this object resides in. */
 	UObject* Outer;
 };
+
+
 
 class UField : public UObject
 {
@@ -246,17 +259,32 @@ public:
 	char pad_0x0088[0x198]; //0x0088
 };
 
+//class UProperty : public UField
+//{
+//public:
+//	__int32 ArrayDim; //0x0030 
+//	__int32 ElementSize; //0x0034 
+//	FQWord PropertyFlags; //0x0038
+//	unsigned __int16 RepIndex; //0x0040
+//	unsigned __int8  BlueprintReplicationCondition; //0x0044
+//
+//	__int32 Offset; //0x0050 
+//	char pad_0x0054[0x24]; //0x0054
+//};
+
 class UProperty : public UField
 {
 public:
 	__int32 ArrayDim; //0x0030 
 	__int32 ElementSize; //0x0034 
 	FQWord PropertyFlags; //0x0038
-	__int32 PropertySize; //0x0040 
-	char pad_0x0044[0xC]; //0x0044
-	__int32 Offset; //0x0050 
-	char pad_0x0054[0x24]; //0x0054
+	unsigned __int16 RepIndex; //0x0040
+	unsigned __int8  BlueprintReplicationCondition; //0x0042
+	char pad_0x0043[0x1]; //0x0043
+	__int32 Offset; //0x0044
+	char pad_0x0048[0x24]; //0x0048
 };
+
 
 class UNumericProperty : public UProperty
 {

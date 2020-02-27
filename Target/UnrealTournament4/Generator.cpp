@@ -16,18 +16,28 @@ public:
 			{ "ScriptStruct Engine.RootMotionSourceGroup", 8 }
 		};
 
+
+		//value_type    std::vector<std::tuple<const char*, const char*, size_t, const char*>>;
 		virtualFunctionPattern["Class CoreUObject.Object"] = {
 			{ "\x45\x33\xF6\x4D\x8B\xE0", "xxxxxx", 0x200, R"(	inline void ProcessEvent(class UFunction* function, void* parms)
 	{
 		return GetVFunction<void(*)(UObject*, class UFunction*, void*)>(this, %d)(this, function, parms);
 	})" }
 		};
+
+
+
+
 		virtualFunctionPattern["Class CoreUObject.Class"] = {
 			{ "\x4C\x8B\xDC\x57\x48\x81\xEC", "xxxxxxx", 0x200, R"(	inline UObject* CreateDefaultObject()
 	{
 		return GetVFunction<UObject*(*)(UClass*)>(this, %d)(this);
 	})" }
 		};
+
+
+
+
 
 		predefinedMembers["Class CoreUObject.Object"] = {
 			{ "void*", "Vtable" },

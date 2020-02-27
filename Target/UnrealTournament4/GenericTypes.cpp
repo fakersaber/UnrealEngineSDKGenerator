@@ -193,6 +193,7 @@ UEProperty::Info UEByteProperty::GetInfo() const
 {
 	if (IsEnum())
 	{
+		//构造的字符串TEnumAsByte<EClassname>
 		return Info::Create(PropertyType::Primitive, sizeof(uint8_t), false, "TEnumAsByte<" + MakeUniqueCppName(GetEnum()) + ">");
 	}
 	return Info::Create(PropertyType::Primitive, sizeof(uint8_t), false, "unsigned char");
@@ -543,6 +544,7 @@ UEProperty UEArrayProperty::GetInner() const
 //---------------------------------------------------------------------------
 UEProperty::Info UEArrayProperty::GetInfo() const
 {
+	//TArray拿类型是用
 	auto inner = GetInner().GetInfo();
 	if (inner.Type != PropertyType::Unknown)
 	{

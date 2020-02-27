@@ -61,7 +61,9 @@ private:
 	__int32 NumChunks;
 };
 
-using TNameEntryArray = TStaticIndirectArrayThreadSafeRead<FNameEntry, 2 * 1024 * 1024, 16384>;
+//4.22 using TNameEntryArray = TStaticIndirectArrayThreadSafeRead<FNameEntry, 4 * 1024 * 1024, 16384>;
+//总共4M个ElementType,每个Chunk16K个ElementType,总共128k个chunck
+using TNameEntryArray = TStaticIndirectArrayThreadSafeRead<FNameEntry, 2 * 1024 * 1024, 1024 * 16>;
 
 TNameEntryArray* GlobalNames = nullptr;
 

@@ -39,6 +39,7 @@ std::string UEObject::GetFullName() const
 	return std::string("(null)");
 }
 
+//根据名字拼字符串，不关键
 std::string UEObject::GetNameCPP() const
 {
 	std::string name;
@@ -77,6 +78,7 @@ UEProperty::Info UEProperty::GetInfo() const
 {
 	if (IsValid())
 	{
+		//uint8有Uenum与原生类型多种
 		if (IsA<UEByteProperty>())
 		{
 			return Cast<UEByteProperty>().GetInfo();
